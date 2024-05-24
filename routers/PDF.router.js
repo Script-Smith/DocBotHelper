@@ -1,16 +1,31 @@
 import express from 'express'
-import pdfParser from 'pdf-parser'
-import pdf from "./models"
+import fs from "fs"
+import PDFParser from "pdf2json";
+import asyncHandler from '../middlewares/errorHandler.js';
+
+const pdfParser = new PDFParser();
 const PDFrouter = express.Router();
+const pdfFilePath = "./models/PDFs/terms.pdf"
 
-const PDF_PATH = "";
+pdfParser.on('pdfParser_dataReady', pdfData => {
+    console.log(pdfData); // Log the parsed data for debugging purposes
+});
+pdfParser.on('pdfParser_dataError', errData => {
+    console.error(errData.parserError);
+});
 
-PDFrouter.get("/get-pdf-data", (req, res, next) => {
-    return pdfParser.pdf2json(PDF_PATH, function (error, pdf) {
-        if(error != null){
-            console.log(error);
-        }else{
-            console.log(JSON.stringify(pdf));
+PDFrouter.get("/", asyncHandler((req, res) => {
+    fs.readFile(pdfFilePath, (err, pdfBuffer) => {
+        if (!err) {
+            pdfParser.parseBuffer(pdfBuffer);
+            // Respond with the parsed data once available
+            pdfParser.on('pdfParser_dataReady', (pdfData) => {
+                res.json(pdfData);
+            });
+        } else {
+            res.status(500).send("Error reading the PDF file.");
         }
     });
-})
+}));
+
+export default PDFrouter;
