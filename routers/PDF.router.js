@@ -1,31 +1,42 @@
-import express from 'express'
-import fs from "fs"
-import PDFParser from "pdf2json";
-import asyncHandler from '../middlewares/errorHandler.js';
+import express from "express";
+import multer from "multer";
+import fs from "fs";
+import path from "path";
+import pdf from "pdf-parse";
+import { saveDataToJson } from "../dataHandler.js"; // Import the save function from dataHandler.js
 
-const pdfParser = new PDFParser();
+// Set up multer for file uploads
+const upload = multer({ dest: "uploads/" });
+
 const PDFrouter = express.Router();
-const pdfFilePath = "./models/PDFs/terms.pdf"
 
-pdfParser.on('pdfParser_dataReady', pdfData => {
-    console.log(pdfData); // Log the parsed data for debugging purposes
-});
-pdfParser.on('pdfParser_dataError', errData => {
-    console.error(errData.parserError);
-});
+PDFrouter.post("/getData", upload.single("pdfFile"), (req, res) => {
+  
+  // Check if a file was uploaded
+  if (!req.file) {
+    return res.status(400).json({ msg: "No file uploaded" });
+  }
 
-PDFrouter.get("/", asyncHandler((req, res) => {
-    fs.readFile(pdfFilePath, (err, pdfBuffer) => {
-        if (!err) {
-            pdfParser.parseBuffer(pdfBuffer);
-            // Respond with the parsed data once available
-            pdfParser.on('pdfParser_dataReady', (pdfData) => {
-                res.json(pdfData);
-            });
-        } else {
-            res.status(500).send("Error reading the PDF file.");
-        }
-    });
-}));
+  // Read the uploaded PDF file
+  const pdfFilePath = path.resolve(req.file.path);
+  fs.readFile(pdfFilePath, (err, data) => {
+    if (err) {
+      return res.status(500).json({ msg: "Error reading PDF file", err });
+    }
+
+    // Parse PDF content
+    pdf(data)
+      .then((parsedData) => {
+        const extractedJsonData = {...parsedData};
+
+        saveDataToJson(extractedJsonData); // Save the extracted data to the JSON file
+        fs.unlinkSync(pdfFilePath);
+        return res.json("Data extracted and saved in data.json!");
+      })
+      .catch((parseErr) => {
+        res.status(500).json({ msg: "Error parsing PDF file", parseErr });
+      });
+  });
+});
 
 export default PDFrouter;
