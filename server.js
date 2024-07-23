@@ -1,6 +1,7 @@
-import http from 'http';
-import app from "./app.js"
+import http from "http";
+import app from "./app.js";
 
+const port = process.env.PORT;
 const server = http.createServer(app);
 
-server.listen(3000, () => console.log("server is running on port 3000"));
+server.listen(port, () => console.log("server is running on port "+port+" "));
