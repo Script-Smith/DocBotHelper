@@ -1,5 +1,9 @@
-node_modules
+# ENV varibles
+.env
 
+# json data
 data.json
 
-.env
+# node modules
+node_modules
+
