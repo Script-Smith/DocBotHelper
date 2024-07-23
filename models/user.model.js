@@ -1,13 +1,12 @@
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+import { Schema, model } from "mongoose";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
-const recruiterModel = mongoose.Schema(
+const { compareSync, genSaltSync, hashSync } = bcrypt;
+const { sign } = jwt;
+
+const userModel = Schema(
   {
-    role: {
-      type: String,
-      default: "recruiter",
-    },
     firstname: {
       type: String,
       trim: true,
@@ -17,14 +16,6 @@ const recruiterModel = mongoose.Schema(
     lastname: {
       type: String,
       trim: true,
-    },
-    contact: {
-      type: String,
-      required: [true, "Can not left Contact Empty !!"],
-    },
-    city: {
-      type: String,
-      required: [true, "City name is Required"],
     },
     email: {
       type: String,
@@ -53,21 +44,21 @@ const recruiterModel = mongoose.Schema(
   { timestamps: true }
 );
 
-recruiterModel.pre("save", function () {
+userModel.pre("save", function () {
   if (!this.isModified("password")) {
     return;
   }
 
-  let salt = bcrypt.genSaltSync(10);
-  this.password = bcrypt.hashSync(this.password, salt);
+  let salt = genSaltSync(10);
+  this.password = hashSync(this.password, salt);
 });
 
-recruiterModel.methods.comparePassword = function (password) {
-  return bcrypt.compareSync(password, this.password);
+userModel.methods.comparePassword = function (password) {
+  return compareSync(password, this.password);
 };
 
-recruiterModel.methods.getWebToken = function () {
-  return jwt.sign(
+userModel.methods.getWebToken = function () {
+  return sign(
     {
       id: this._id,
     },
@@ -78,4 +69,4 @@ recruiterModel.methods.getWebToken = function () {
   );
 };
 
-module.exports = mongoose.model("recruiterModel", recruiterModel);
+export default model("userModel", userModel);
